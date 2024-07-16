@@ -1,0 +1,153 @@
+public partial class WebForm4 : System.Web.UI.Page
+    {
+        Blo b = new Blo();
+        public int shiptotal=0;
+        protected void Page_Load(object sender, EventArgs e)
+        { 
+            if (!IsPostBack)
+            {
+              if(Session["id"]!=null)
+                    { 
+                    if (Session["products"] != null)
+                    {
+
+                        List<cartitems> productst;
+                        productst = (List<cartitems>) Session["products"];
+
+                       this.dpp.DataSource = productst;
+                        this.dpp.DataBind();
+                        int totalp=0; 
+                        foreach(var p in productst)
+                                                       
+                            {
+                            totalp += ((p.priceitem*p.qty)); 
+                        }
+                        //total.Text="Total Amount:"+Convert.ToString(totalp)+"$";
+                     
+
+                        int userid = Convert.ToInt32(Session["id"]);
+                        DataSet addressource = b.getaddress(userid);
+                        if(addressource.Tables[0].Rows.Count == 0 )
+                        {
+                            address.Visible = false;
+                            Error.Text = " You need a shipping address"
+;                            addressadd.Visible = true; 
+                        }
+                        else
+                        {
+                                                   
+                        address.DataSource = addressource;
+                        address.DataValueField = "adid";
+                        address.DataTextField = "address";
+                        address.DataBind();
+
+                            prodtotal.Text = "Products Price:" + Convert.ToString(totalp) + "$";
+                            calculating(); 
+                            total.Text ="Total Amount including Shipping:" + Convert.ToString(totalp + shiptotal)+"$";
+                        }
+
+                    }
+                    else
+                    {
+                        Response.Redirect("~/default.aspx");
+
+                    }
+                }
+                else
+                {
+                    Response.Redirect("~/login.aspx");
+
+                }
+               
+            }
+        }
+
+        protected void Unnamed1_Click(object sender, EventArgs e)
+        { if(address.SelectedValue =="")
+            {
+                Error.Visible = true;
+                Error.Text = "PLease select a valid address or add an address from your profile";
+                Error.ForeColor = System.Drawing.Color.Red;
+   
+            }
+            else {
+               
+            int shipid =  Convert.ToInt32(address.SelectedValue);
+          
+
+            List<cartitems> productst;
+            productst = (List<cartitems>)Session["products"];
+            //Blo b = new Blo();
+            foreach (var pr in productst)
+            {
+             b.subsqty( pr.itemid , pr.qty); 
+            }
+            int userid = Convert.ToInt32(Session["id"]);
+                int shipvalue = Convert.ToInt32(shptotal.Text);
+        
+          b.insertorder(userid, productst,shipid,shipvalue);
+                       
+            Response.Redirect("~/confirm.aspx");
+
+
+            // send him to a confirmation page of his order and it has been shipped 
+        }
+        }
+
+        protected void dpp_ItemCommand(object source, RepeaterCommandEventArgs e)
+        {
+            Label a =(Label) e.Item.FindControl("prid");
+            int prid = Convert.ToInt32(a.Text);
+            List<cartitems> abr = (List<cartitems>)(Session["products"]);
+            foreach(var pr in abr)
+            {
+                if (pr.itemid == prid)
+                { abr.Remove(pr);
+                    break; 
+                }
+
+            }
+
+            if (abr.Count == 0)
+            {
+                Session["products"] = null;
+                Response.Redirect("~/default.aspx");            }
+            else
+
+            {
+                Session["products"] = abr;
+                Response.Redirect("~/cart.aspx");
+            }
+        }
+
+        protected void addressadd_Click(object sender, EventArgs e)
+        {
+            Response.Redirect("~/addressadd.aspx?page=checkout"); 
+        }
+
+        protected void address_SelectedIndexChanged(object sender, EventArgs e)
+              {
+            calculating();
+        }
+        protected void calculating()
+        {
+            string addresscountry = address.SelectedItem.Text.ToString();
+            string[] country = addresscountry.Split(',');
+            string Tcountry = country[3];
+            List<cartitems> lt = (List<cartitems>)Session["products"];
+            int ashiptital = b.calculateshipping(lt, Tcountry);
+            shiptotal = ashiptital;
+            shptotal.Text = ashiptital.ToString();
+
+
+
+
+
+        }
+
+
+
+
+        }
+
+    }
